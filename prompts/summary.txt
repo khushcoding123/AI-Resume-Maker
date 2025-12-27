@@ -1,0 +1,13 @@
+Generate a professional summary (2-3 sentences) for a resume based on the following information:
+
+{{resumeData}}
+
+Requirements:
+- Start with years of experience or key qualification
+- Highlight 2-3 key strengths or achievements
+- Mention relevant skills or expertise
+- Keep it concise and impactful (50-100 words)
+- Use professional language
+- Focus on what makes the candidate valuable
+
+Write only the summary text, no additional formatting.

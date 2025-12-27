@@ -1,0 +1,15 @@
+{
+  "name": "ai-resume-maker",
+  "version": "1.0.0",
+  "description": "Full-stack AI Resume Maker with hybrid architecture",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "build": "cd frontend && npm run build"
+  },
+  "keywords": ["resume", "ai", "nlp", "nextjs", "express"],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,14 @@
+Generate 3 professional bullet points for a resume based on the following information:
+
+Position: {{position}}
+Company: {{company}}
+Additional Context: {{context}}
+
+Requirements:
+- Use action verbs at the beginning of each bullet point
+- Include quantifiable results and achievements when possible
+- Focus on impact and outcomes
+- Keep each bullet point concise (1-2 lines)
+- Make them specific and compelling
+
+Format the response as a list of bullet points, one per line.
