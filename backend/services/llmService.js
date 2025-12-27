@@ -13,7 +13,7 @@ async function generateBullet(position, company, context, promptTemplate) {
       .replace('{{context}}', context || 'No additional context provided.')
 
     const completion = await anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL || 'claude-3-opus-20240229',
+      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
       max_tokens: 1000,
       temperature: 0.7,
       system: 'You are a professional resume writer. Generate impactful bullet points that highlight achievements using action verbs and quantifiable results.',
@@ -51,7 +51,7 @@ async function generateSummary(resumeData, promptTemplate) {
     const prompt = promptTemplate.replace('{{resumeData}}', resumeText)
 
     const completion = await anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL || 'claude-3-opus-20240229',
+      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
       max_tokens: 1000,
       temperature: 0.7,
       system: 'You are a professional resume writer. Create compelling professional summaries that highlight key qualifications and achievements.',
@@ -84,7 +84,7 @@ async function tailorResume(resumeData, jobDescription, promptTemplate) {
       .replace('{{jobDescription}}', jobDescription)
 
     const completion = await anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL || 'claude-3-opus-20240229',
+      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
       max_tokens: 4000,
       temperature: 0.7,
       system: 'You are a professional resume writer specializing in tailoring resumes to match job descriptions. Return the tailored resume in JSON format matching the original structure.',
@@ -117,6 +117,8 @@ async function tailorResume(resumeData, jobDescription, promptTemplate) {
 }
 
 async function agentEditResume(resumeData, instructions) {
+  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514'
+  
   try {
     // Check if API key is configured
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -128,7 +130,6 @@ async function agentEditResume(resumeData, instructions) {
       }
     }
 
-    const model = process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229'
     console.log(`Using model: ${model}`)
     console.log(`Processing instructions: ${instructions.substring(0, 100)}...`)
 
@@ -136,39 +137,15 @@ async function agentEditResume(resumeData, instructions) {
       model: model,
       max_tokens: 4000,
       temperature: 0.4,
-      system: `You are a meticulous resume editor AI assistant. Your primary role is to intelligently interpret user instructions and apply them to the relevant sections of the resume document.
+      system: `You are a meticulous resume editor AI assistant. Your task is to analyze user instructions and update the resume data accordingly.
 
-KEY RESPONSIBILITIES:
-1. Analyze the user's instructions/prompt carefully to identify:
-   - Which sections of the resume need to be updated (personal info, experiences, education, skills, summary, etc.)
-   - What specific information should be filled in or modified
-   - The intent behind the user's request
+CRITICAL: You MUST respond with ONLY valid JSON in this exact format:
+{
+  "resumeData": { ... the complete updated resume object ... },
+  "message": "A brief summary of what was changed"
+}
 
-2. Map user instructions to relevant resume sections:
-   - Personal information (name, email, phone, address, summary)
-   - Work experiences (positions, companies, dates, bullet points)
-   - Education (degrees, institutions, fields, dates)
-   - Skills (categories and items)
-   - Any other resume sections
-
-3. Apply changes intelligently:
-   - Fill in missing information when the user provides it
-   - Update existing information when the user requests modifications
-   - Add new entries when appropriate (e.g., new work experience, education, skills)
-   - Preserve all existing data that is not mentioned in the instructions
-   - Maintain professional formatting and structure
-
-4. Preserve document integrity:
-   - Keep the original JSON schema structure intact
-   - Only modify the specific parts mentioned in the user's instructions
-   - Ensure all data types and formats remain consistent
-
-OUTPUT FORMAT:
-Respond with valid JSON only, using the shape: { "resumeData": ResumeData, "message": string }
-- resumeData: The updated resume JSON with all changes applied
-- message: A clear summary of what edits were made, which sections were updated, and how the user's instructions were interpreted
-
-Remember: Your goal is to be helpful and precise - use the user's prompt to fill in or update the relevant parts of the document while maintaining the overall structure and quality of the resume.`,
+Do NOT include any text before or after the JSON. Do NOT use markdown code blocks. Return ONLY the raw JSON object.`,
       messages: [
         {
           role: 'user',
@@ -176,7 +153,7 @@ Remember: Your goal is to be helpful and precise - use the user's prompt to fill
             resumeData,
             null,
             2
-          )}\n\nUser instructions:\n${instructions}\n\nPlease analyze the user's instructions, identify which parts of the resume need to be filled or updated, and apply the changes accordingly. Respond with a valid JSON object containing the updated resume and a message summarizing the edits.`,
+          )}\n\nUser instructions:\n${instructions}\n\nAnalyze the user's instructions and update the resume accordingly. Return ONLY a valid JSON object with this exact structure:\n{\n  "resumeData": { ... updated resume ... },\n  "message": "Summary of changes"\n}\n\nDo not include any explanatory text, only the JSON object.`,
         },
       ],
     })
@@ -191,16 +168,39 @@ Remember: Your goal is to be helpful and precise - use the user's prompt to fill
     }
 
     const response = completion.content[0].text.trim()
-    console.log('Received response from API (first 200 chars):', response.substring(0, 200))
+    console.log('Received response from API (first 500 chars):', response.substring(0, 500))
+    console.log('Received response from API (last 200 chars):', response.substring(Math.max(0, response.length - 200)))
 
     try {
       // Try to extract JSON from the response in case there's extra text
-      const jsonMatch = response.match(/\{[\s\S]*\}/)
-      const jsonResponse = jsonMatch ? jsonMatch[0] : response
+      // Look for JSON that starts with { and contains "resumeData"
+      let jsonResponse = response
+      
+      // Remove markdown code blocks if present
+      jsonResponse = jsonResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '')
+      
+      // Try to find the JSON object
+      const jsonMatch = jsonResponse.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        jsonResponse = jsonMatch[0]
+      }
+      
       const parsed = JSON.parse(jsonResponse)
       
+      // Check if the response has resumeData field
       if (!parsed.resumeData) {
+        // Check if the parsed object IS the resume data (missing wrapper)
+        if (parsed.personalInfo || parsed.experiences || parsed.education || parsed.skills) {
+          console.log('Response appears to be resume data directly, wrapping it')
+          return {
+            resumeData: parsed,
+            message: parsed.message || 'I applied your instructions to the resume. Please verify the results.',
+          }
+        }
+        
         console.error('Response missing resumeData field')
+        console.error('Parsed object keys:', Object.keys(parsed))
+        console.error('Full parsed response:', JSON.stringify(parsed, null, 2))
         return {
           resumeData,
           message:
@@ -216,11 +216,20 @@ Remember: Your goal is to be helpful and precise - use the user's prompt to fill
       }
     } catch (parseError) {
       console.error('Failed to parse agent response as JSON:', parseError)
-      console.error('Full response was:', response)
+      console.error('Full response length:', response.length)
+      console.error('Full response:', response)
+      console.error('Parse error details:', parseError.message, parseError.stack)
+      
+      // Try to provide more helpful error message
+      let errorMsg = `I received a response but couldn't parse it correctly. `
+      if (response.includes('resumeData')) {
+        errorMsg += 'The response seems to contain resume data but the JSON format is invalid. '
+      }
+      errorMsg += `Error: ${parseError.message}`
+      
       return {
         resumeData,
-        message:
-          `I received a response but couldn't parse it correctly. The AI may have returned text instead of JSON. Error: ${parseError.message}`,
+        message: errorMsg,
       }
     }
   } catch (error) {
@@ -229,6 +238,7 @@ Remember: Your goal is to be helpful and precise - use the user's prompt to fill
       status: error.status,
       statusText: error.statusText,
       error: error.error,
+      model: model, // Log which model was used
     })
     
     let errorMessage = 'Agent was unavailable. Your resume was not changed. Please try again later.'
@@ -239,6 +249,8 @@ Remember: Your goal is to be helpful and precise - use the user's prompt to fill
       errorMessage = 'Rate limit exceeded. Please wait a moment and try again.'
     } else if (error.status === 400) {
       errorMessage = `Invalid request: ${error.message || 'Please check your input and try again.'}`
+    } else if (error.status === 404) {
+      errorMessage = `Model not found: ${model}. Please check your ANTHROPIC_MODEL in backend/.env. Valid models include: claude-sonnet-4-20250514, claude-opus-4-1-20250805, claude-3-5-haiku-20241022`
     } else if (error.message) {
       errorMessage = `Error: ${error.message}`
     }

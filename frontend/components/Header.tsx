@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useResumeStore } from '@/store/resumeStore'
 import { FiDownload, FiFileText, FiRefreshCw } from 'react-icons/fi'
 import { generatePDF } from '@/utils/pdfGenerator'
@@ -23,7 +24,12 @@ export default function Header() {
   return (
     <header className="bg-white shadow-md py-4 mb-8">
       <div className="container mx-auto px-4 flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-primary-600">AI Resume Maker</h1>
+        <Link 
+          href="/"
+          className="text-3xl font-bold text-primary-600 hover:text-primary-700 transition-colors cursor-pointer"
+        >
+          AI Resume Maker
+        </Link>
         
         <div className="flex gap-4 items-center">
           <select

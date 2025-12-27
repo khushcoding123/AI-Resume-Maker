@@ -178,10 +178,10 @@ export default function ModernTemplate({ data }: ModernTemplateProps) {
                   {edu.endDate ? new Date(edu.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Present'}
                 </div>
               </div>
-              {(edu.gpa || edu.honors.length > 0) && (
+              {(edu.gpa || (edu.honors && edu.honors.length > 0)) && (
                 <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
                   {edu.gpa && <span>GPA: {edu.gpa}</span>}
-                  {edu.honors.length > 0 && (
+                  {edu.honors && edu.honors.length > 0 && (
                     <span style={{ marginLeft: '15px' }}>
                       Honors: {edu.honors.join(', ')}
                     </span>
