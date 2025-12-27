@@ -24,7 +24,9 @@ export default function LivePreview() {
   return (
     <div className="w-full">
       <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-8 overflow-y-auto max-h-[800px]">
-        <div className="resume-preview">{renderTemplate()}</div>
+        <div className="resume-preview" style={{ position: 'relative' }}>
+          {renderTemplate()}
+        </div>
       </div>
     </div>
   )

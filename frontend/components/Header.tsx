@@ -13,9 +13,10 @@ export default function Header() {
       toast.loading('Generating PDF...', { id: 'pdf' })
       await generatePDF(resumeData)
       toast.success('PDF generated successfully!', { id: 'pdf' })
-    } catch (error) {
-      toast.error('Failed to generate PDF', { id: 'pdf' })
-      console.error(error)
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Unknown error occurred'
+      console.error('PDF generation error:', error)
+      toast.error(`Failed to generate PDF: ${errorMessage}`, { id: 'pdf', duration: 5000 })
     }
   }
 
